@@ -1,0 +1,107 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zerotrust-config
+  namespace: zerotrust-compliance
+data:
+  AWS_REGION: "us-east-1"
+  LOG_LEVEL: "INFO"
+  SCAN_PARALLEL_SCANS: "10"
+  SCAN_BATCH_SIZE: "100"
+  SEVERITY_THRESHOLD: "low"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: zerotrust-secrets
+  namespace: zerotrust-compliance
+type: Opaque
+stringData:
+  AWS_ROLE_ARN: "arn:aws:iam::123456789012:role/zerotrust-compliance-role"
+  SLACK_WEBHOOK_URL: "https://hooks.slack.com/services/xxx"
+  SNS_TOPIC_ARN: "arn:aws:sns:us-east-1:123456789012:compliance-alerts"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: zerotrust-scanner
+  namespace: zerotrust-compliance
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/zerotrust-compliance-role
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zerotrust-scanner
+  namespace: zerotrust-compliance
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: zerotrust-scanner
+  template:
+    metadata:
+      labels:
+        app: zerotrust-scanner
+    spec:
+      serviceAccountName: zerotrust-scanner
+      containers:
+      - name: scanner
+        image: public.ecr.aws/zerotrust/compliance-scanner:latest
+        env:
+        - name: AWS_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: zerotrust-config
+              key: AWS_REGION
+        envFrom:
+        - secretRef:
+            name: zerotrust-secrets
+        resources:
+          requests:
+            memory: 512Mi
+            cpu: 250m
+          limits:
+            memory: 1Gi
+            cpu: 500m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zerotrust-scanner
+  namespace: zerotrust-compliance
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8080
+  selector:
+    app: zerotrust-scanner
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: zerotrust-daily-scan
+  namespace: zerotrust-compliance
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: zerotrust-scanner
+          containers:
+          - name: scanner
+            image: public.ecr.aws/zerotrust/compliance-scanner:latest
+            command: ["python", "-m", "src.scanners.compliance_scanner"]
+            args: ["--mode", "scheduled"]
+            env:
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: zerotrust-config
+                  key: AWS_REGION
+            envFrom:
+            - secretRef:
+                name: zerotrust-secrets
+          restartPolicy: OnFailure

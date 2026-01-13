@@ -1,0 +1,413 @@
+Metadata-Version: 2.4
+Name: zerotrust-compliance-scanner
+Version: 1.0.0
+Summary: A fully automated serverless compliance scanner for CIS benchmarks
+Home-page: https://github.com/your-org/zero-trust-compliance-scanner
+Author: Zero-Trust Security Team
+Author-email: security@example.com
+Keywords: security,compliance,cis,aws,azure,gcp,kubernetes,terraform
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Information Technology
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: Security
+Classifier: Topic :: System :: Monitoring
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: boto3>=1.26.0
+Requires-Dist: botocore>=1.29.0
+Requires-Dist: requests>=2.28.0
+Requires-Dist: pyhcl2>=1.1.0
+Requires-Dist: dataclasses-json>=0.5.0
+Requires-Dist: pytz>=2023.3
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: click>=8.1.0
+Requires-Dist: rich>=13.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.1.0; extra == "dev"
+Requires-Dist: pytest-mock>=3.11.0; extra == "dev"
+Provides-Extra: aws
+Requires-Dist: boto3>=1.26.0; extra == "aws"
+Provides-Extra: azure
+Requires-Dist: azure-identity>=1.13.0; extra == "azure"
+Requires-Dist: azure-mgmt-resource>=23.0.0; extra == "azure"
+Requires-Dist: azure-mgmt-storage>=21.0.0; extra == "azure"
+Requires-Dist: azure-mgmt-network>=20.0.0; extra == "azure"
+Provides-Extra: gcp
+Requires-Dist: google-cloud-storage>=2.10.0; extra == "gcp"
+Requires-Dist: google-cloud-compute>=1.10.0; extra == "gcp"
+Requires-Dist: google-cloud-oslogin>=1.10.0; extra == "gcp"
+Requires-Dist: google-cloud-resource-manager>=1.10.0; extra == "gcp"
+Provides-Extra: kubernetes
+Requires-Dist: kubernetes>=27.2.0; extra == "kubernetes"
+Provides-Extra: lambda
+Requires-Dist: aws-lambda-powertools>=2.13.0; extra == "lambda"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# Zero-Trust Compliance Scanner
+
+A fully automated serverless solution that continuously scans enterprise infrastructure for compliance violations against CIS benchmarks. Integrated directly into CI/CD pipelines to prevent misconfigurations from reaching production.
+
+## Features
+
+- **Multi-Cloud Support**: AWS, Azure, Google Cloud Platform, Kubernetes, and Terraform
+- **CIS Benchmark Compliance**: Pre-built rules for CIS AWS, Azure, GCP, and Kubernetes benchmarks
+- **Serverless Architecture**: AWS Lambda-based for automatic scaling and cost efficiency
+- **CI/CD Integration**: GitHub Actions, GitLab CI, Azure DevOps, and Jenkins integration
+- **Real-time Alerting**: SNS, Slack, PagerDuty, and Security Hub integration
+- **Comprehensive Reporting**: JSON, HTML, and dashboard-ready reports
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Zero-Trust Compliance Scanner                 │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐           │
+│  │   CI/CD      │  │   Scheduled  │  │   Event      │           │
+│  │   Pipeline   │  │   Scanner    │  │   Triggers   │           │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘           │
+│         │                 │                 │                     │
+│         └────────────┬────┴────────────────┘                     │
+│                      │                                           │
+│              ┌───────▼───────┐                                   │
+│              │   Lambda      │                                   │
+│              │   Functions   │                                   │
+│              └───────┬───────┘                                   │
+│                      │                                           │
+│      ┌───────────────┼───────────────┐                           │
+│      │               │               │                           │
+│      ▼               ▼               ▼                           │
+│  ┌─────────┐   ┌─────────┐   ┌─────────┐                        │
+│  │  Rule   │   │Resource │   │ Alert & │                        │
+│  │ Engine  │   │Collectors│   │ Reporting│                        │
+│  └─────────┘   └─────────┘   └─────────┘                        │
+│                      │                                           │
+│                      ▼                                           │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │              Compliance Findings Database                │   │
+│  │          (DynamoDB + S3 + CloudWatch Logs)               │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.11+
+- AWS CLI configured with appropriate permissions
+- Terraform >= 1.0
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/your-org/zero-trust-compliance-scanner.git
+cd zero-trust-compliance-scanner
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install package
+pip install -e .
+```
+
+### Basic Usage
+
+```bash
+# Run a compliance scan
+compliance-scan scan --provider aws
+
+# Run CI/CD scan with threshold
+compliance-scan scan --provider aws --threshold-score 80 --commit-sha abc123
+
+# Generate GitHub Actions workflow
+compliance-scan generate --provider aws > .github/workflows/compliance.yml
+```
+
+### Docker
+
+```bash
+# Build and run with Docker
+docker build -t zerotrust-compliance-scanner .
+docker run --rm -e AWS_PROFILE=default zerotrust-compliance-scanner scan --provider aws
+```
+
+## Configuration
+
+### AWS Lambda Deployment
+
+```bash
+# Deploy infrastructure with Terraform
+cd deploy/terraform
+terraform init
+terraform apply -var="aws_region=us-east-1" -var="alert_email=you@example.com"
+
+# Package and deploy Lambda
+cd ../..
+zip -r deploy/lambda.zip src/ requirements.txt
+aws lambda update-function-code \
+    --function-name zerotrust-compliance-compliance-scanner \
+    --zip-file fileb://deploy/lambda.zip
+```
+
+### Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `AWS_REGION` | AWS region for API calls | Yes |
+| `CONFIG_S3_BUCKET` | S3 bucket for scanner config | No |
+| `SNS_TOPIC_ARN` | SNS topic for alerts | No |
+| `DYNAMODB_TABLE` | DynamoDB table for results | No |
+| `COMPLIANCE_S3_BUCKET` | S3 bucket for reports | No |
+
+### Config File
+
+```json
+{
+  "enabled_providers": ["aws", "azure", "gcp", "terraform"],
+  "aws_regions": ["us-east-1", "us-west-2", "eu-west-1"],
+  "severity_threshold": "low",
+  "batch_size": 100,
+  "timeout_seconds": 300,
+  "parallel_scans": 10,
+  "dry_run": false,
+  "verbose": true
+}
+```
+
+## CIS Compliance Rules
+
+### AWS Rules (CIS AWS Foundations Benchmark v1.2.0)
+
+| Rule ID | Severity | Description |
+|---------|----------|-------------|
+| S3-1 | CRITICAL | S3 buckets should have all public access blocked |
+| IAM-1 | HIGH | IAM password policy should meet complexity requirements |
+| IAM-2 | HIGH | All IAM users should have MFA enabled |
+| EC2-1 | CRITICAL | Security groups should not allow unrestricted SSH |
+| EC2-2 | HIGH | EBS volumes should have encryption enabled |
+| RDS-1 | CRITICAL | RDS instances should not be publicly accessible |
+| KMS-1 | MEDIUM | KMS keys should be enabled for encryption |
+| CWL-1 | MEDIUM | CloudTrail logs should be retained for 365 days |
+| IAM-3 | CRITICAL | IAM roles should not allow wildcard principals |
+| EC2-3 | HIGH | AMIs should not be publicly shared |
+
+### Azure Rules (CIS Microsoft Azure Foundations Benchmark v1.3.0)
+
+| Rule ID | Severity | Description |
+|---------|----------|-------------|
+| AZURE-1 | HIGH | Storage accounts should require HTTPS only |
+| AZURE-2 | CRITICAL | NSG rules should not allow unrestricted management access |
+| AZURE-3 | CRITICAL | Blob storage should have public access disabled |
+| AZURE-4 | HIGH | Microsoft Defender for Cloud should be enabled |
+
+### GCP Rules (CIS Google Cloud Platform Foundation Benchmark v1.0.0)
+
+| Rule ID | Severity | Description |
+|---------|----------|-------------|
+| GCP-1 | CRITICAL | Firewall rules should not allow unrestricted SSH/RDP |
+| GCP-2 | HIGH | Storage buckets should use uniform bucket-level access |
+| GCP-3 | MEDIUM | Storage buckets should use CMEK encryption |
+| GCP-4 | HIGH | Compute instances should have OS login enabled |
+
+### Kubernetes Rules (CIS Kubernetes Benchmark v1.6.0)
+
+| Rule ID | Severity | Description |
+|---------|----------|-------------|
+| K8S-1 | CRITICAL | Pods should not run with privileged containers |
+| K8S-2 | HIGH | Containers should use read-only root filesystem |
+| K8S-3 | HIGH | Pods should run as non-root user |
+| K8S-4 | MEDIUM | Namespaces should have network policies defined |
+| K8S-5 | MEDIUM | Pods should have seccomp profile configured |
+
+### Terraform Rules
+
+| Rule ID | Severity | Description |
+|---------|----------|-------------|
+| TF-1 | HIGH | S3 buckets should have versioning enabled |
+| TF-2 | MEDIUM | S3 buckets should have server access logging enabled |
+| TF-3 | HIGH | Database resources should have backup configuration |
+| TF-4 | CRITICAL | Terraform should not contain hardcoded secrets |
+
+## CI/CD Integration
+
+### GitHub Actions
+
+```yaml
+name: Compliance Scan
+on: [push, pull_request]
+
+jobs:
+  compliance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Run Compliance Scan
+        run: |
+          pip install zerotrust-compliance-scanner
+          compliance-scan scan --provider aws --output-format json > compliance_report.json
+      
+      - name: Check Compliance
+        run: |
+          score=$(cat compliance_report.json | jq -r '.compliance_score')
+          pass=$(cat compliance_report.json | jq -r '.pass')
+          
+          if [ "$pass" == "false" ]; then
+            echo "Compliance check FAILED"
+            exit 1
+          fi
+```
+
+### GitLab CI
+
+```yaml
+compliance_scan:
+  image: public.ecr.aws/zerotrust/compliance-scanner:latest
+  stage: security
+  script:
+    - compliance-scan scan --provider aws --output-format json > compliance_report.json
+  artifacts:
+    paths:
+      - compliance_report.json
+    when: always
+```
+
+## Alerting
+
+### SNS Notification
+
+```python
+from src.utils.alerting import AlertManager
+
+config = ScannerConfig(sns_topic_arn="arn:aws:sns:region:account:topic")
+alert_manager = AlertManager(config)
+
+# Alerts are sent automatically for CRITICAL and HIGH severity findings
+```
+
+### Slack Integration
+
+```python
+config = ScannerConfig(slack_webhook_url="https://hooks.slack.com/...")
+alert_manager = AlertManager(config)
+```
+
+### PagerDuty Integration
+
+```python
+from src.utils.alerting import PagerDutyIntegration
+
+pagerduty = PagerDutyIntegration(
+    api_key="your-api-key",
+    service_id="your-service-id"
+)
+
+pagerduty.trigger_incident(finding, routing_key="your-routing-key")
+```
+
+## API Reference
+
+### ComplianceScanner
+
+```python
+from src.scanners.compliance_scanner import ComplianceScanner
+from src.config import CloudProvider, ScannerConfig
+
+# Initialize scanner
+config = ScannerConfig(
+    enabled_providers=[CloudProvider.AWS],
+    aws_regions=["us-east-1"]
+)
+scanner = ComplianceScanner(config)
+
+# Run full scan
+results = scanner.run_scan()
+
+# Run CI/CD scan
+report = scanner.run_ci_cd_scan(
+    provider=CloudProvider.AWS,
+    commit_sha="abc123",
+    pipeline_id="run-123"
+)
+
+# Get compliance summary
+summary = scanner.get_compliance_summary(results)
+```
+
+### RuleEngine
+
+```python
+from src.rule_engine import RuleEngine
+
+engine = RuleEngine()
+
+# Get all AWS rules
+aws_rules = engine.get_rules(cloud_provider=CloudProvider.AWS)
+
+# Evaluate a single resource
+findings = engine.evaluate_resource(
+    resource={"Id": "sg-123", "IpPermissions": [...]},
+    resource_type="AWS::EC2::SecurityGroup",
+    provider=CloudProvider.AWS
+)
+
+# Scan multiple resources
+result = engine.scan_resources(resources, CloudProvider.AWS)
+```
+
+## Testing
+
+```bash
+# Run unit tests
+pytest tests/unit/ -v
+
+# Run with coverage
+pytest tests/unit/ --cov=src --cov-report=html
+
+# Run integration tests
+pytest tests/integration/ -v
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/new-rule`)
+3. Add tests for your changes
+4. Run the test suite (`pytest`)
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+- GitHub Issues: Report bugs and request features
+- Documentation: See the [docs](docs/) directory
+- AWS Support: For deployment issues, contact AWS Support
+
+## Acknowledgments
+
+- CIS Benchmarks for compliance standards
+- AWS Security Hub for findings integration
+- The open-source community for contributions

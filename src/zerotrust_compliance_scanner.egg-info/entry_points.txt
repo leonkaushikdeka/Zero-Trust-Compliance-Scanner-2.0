@@ -1,0 +1,2 @@
+[console_scripts]
+compliance-scan = src.integrations.cicd_integration:main

@@ -1,0 +1,329 @@
+# Kubernetes Deployment Manifests
+# Zero-Trust Compliance Scanner
+
+## Namespace
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: zerotrust-compliance
+  labels:
+    app: zerotrust-compliance
+    environment: production
+---
+```
+
+## ConfigMap
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zerotrust-config
+  namespace: zerotrust-compliance
+data:
+  AWS_REGION: "us-east-1"
+  LOG_LEVEL: "INFO"
+  SCAN_PARALLEL_SCANS: "10"
+  SCAN_BATCH_SIZE: "100"
+  SEVERITY_THRESHOLD: "low"
+---
+```
+
+## Secret (use external secrets in production)
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: zerotrust-secrets
+  namespace: zerotrust-compliance
+type: Opaque
+stringData:
+  # AWS credentials should be mounted from AWS Secrets Manager
+  AWS_ROLE_ARN: "arn:aws:iam::123456789012:role/zerotrust-compliance-role"
+  SLACK_WEBHOOK_URL: "https://hooks.slack.com/services/xxx"
+  SNS_TOPIC_ARN: "arn:aws:sns:us-east-1:123456789012:compliance-alerts"
+---
+```
+
+## Deployment (Scheduled Scanner)
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zerotrust-scanner
+  namespace: zerotrust-compliance
+  labels:
+    app: zerotrust-scanner
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: zerotrust-scanner
+  template:
+    metadata:
+      labels:
+        app: zerotrust-scanner
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+    spec:
+      serviceAccountName: zerotrust-scanner
+      containers:
+      - name: scanner
+        image: public.ecr.aws/zerotrust/compliance-scanner:latest
+        imagePullPolicy: Always
+        env:
+        - name: AWS_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: zerotrust-config
+              key: AWS_REGION
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: zerotrust-config
+              key: LOG_LEVEL
+        - name: SCAN_PARALLEL_SCANS
+          valueFrom:
+            configMapKeyRef:
+              name: zerotrust-config
+              key: SCAN_PARALLEL_SCANS
+        - name: SCAN_BATCH_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: zerotrust-config
+              key: SCAN_BATCH_SIZE
+        - name: SEVERITY_THRESHOLD
+          valueFrom:
+            configMapKeyRef:
+              name: zerotrust-config
+              key: SEVERITY_THRESHOLD
+        envFrom:
+        - secretRef:
+            name: zerotrust-secrets
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        ports:
+        - containerPort: 8080
+          name: http
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - zerotrust-scanner
+              topologyKey: kubernetes.io/hostname
+---
+```
+
+## Service
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: zerotrust-scanner
+  namespace: zerotrust-compliance
+  labels:
+    app: zerotrust-scanner
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: zerotrust-scanner
+---
+```
+
+## CronJob (Daily Scan)
+```yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: zerotrust-daily-scan
+  namespace: zerotrust-compliance
+  labels:
+    app: zerotrust-daily-scan
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: zerotrust-daily-scan
+        spec:
+          serviceAccountName: zerotrust-scanner
+          restartPolicy: OnFailure
+          containers:
+          - name: scanner
+            image: public.ecr.aws/zerotrust/compliance-scanner:latest
+            command: ["python", "-m", "src.scanners.compliance_scanner"]
+            args: ["--mode", "scheduled"]
+            env:
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: zerotrust-config
+                  key: AWS_REGION
+            envFrom:
+            - secretRef:
+                name: zerotrust-secrets
+            resources:
+              requests:
+                memory: "1Gi"
+                cpu: "500m"
+              limits:
+                memory: "2Gi"
+                cpu: "1000m"
+---
+```
+
+## HorizontalPodAutoscaler
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: zerotrust-scanner-hpa
+  namespace: zerotrust-compliance
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: zerotrust-scanner
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+---
+```
+
+## PodDisruptionBudget
+```yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: zerotrust-scanner-pdb
+  namespace: zerotrust-compliance
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: zerotrust-scanner
+---
+```
+
+## RBAC
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: zerotrust-scanner
+  namespace: zerotrust-compliance
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/zerotrust-compliance-role
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: zerotrust-scanner
+  namespace: zerotrust-compliance
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets", "services"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch", "create", "update", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: zerotrust-scanner-binding
+  namespace: zerotrust-compliance
+subjects:
+- kind: ServiceAccount
+  name: zerotrust-scanner
+  namespace: zerotrust-compliance
+roleRef:
+  kind: Role
+  name: zerotrust-scanner
+  apiGroup: rbac.authorization.k8s.io
+---
+```
+
+## NetworkPolicy
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: zerotrust-scanner-network-policy
+  namespace: zerotrust-compliance
+spec:
+  podSelector:
+    matchLabels:
+      app: zerotrust-scanner
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 53
+---
+```
