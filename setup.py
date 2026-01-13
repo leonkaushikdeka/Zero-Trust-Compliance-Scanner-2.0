@@ -11,7 +11,7 @@ setup(
     description="A fully automated serverless compliance scanner for CIS benchmarks",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/your-org/zero-trust-compliance-scanner",
+    url="https://github.com/leonkaushikdeka/Zero-Trust-Compliance-Scanner-2.0",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     python_requires=">=3.9",

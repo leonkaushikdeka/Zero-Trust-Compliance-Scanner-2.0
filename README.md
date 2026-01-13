@@ -194,7 +194,7 @@ Zero-trust compliance means:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/zero-trust-compliance-scanner.git
+git clone https://github.com/leonkaushikdeka/Zero-Trust-Compliance-Scanner-2.0.git
 cd zero-trust-compliance-scanner
 
 # 2. Install dependencies
@@ -838,10 +838,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **GitHub Issues**: [Report bugs and request features](https://github.com/your-org/zero-trust-compliance-scanner/issues)
+- **GitHub Issues**: [Report bugs and request features](https://github.com/leonkaushikdeka/Zero-Trust-Compliance-Scanner-2.0/issues)
 - **Documentation**: See the [docs](docs/) directory
 - **AWS Support**: For deployment issues, contact AWS Support
-- **Discussions**: [Join our GitHub Discussions](https://github.com/your-org/zero-trust-compliance-scanner/discussions)
+- **Discussions**: [Join our GitHub Discussions](https://github.com/leonkaushikdeka/Zero-Trust-Compliance-Scanner-2.0/discussions)
 
 ---
 

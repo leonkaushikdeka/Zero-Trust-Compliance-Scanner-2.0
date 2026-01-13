@@ -2,7 +2,7 @@ Metadata-Version: 2.4
 Name: zerotrust-compliance-scanner
 Version: 1.0.0
 Summary: A fully automated serverless compliance scanner for CIS benchmarks
-Home-page: https://github.com/your-org/zero-trust-compliance-scanner
+Home-page: https://github.com/leonkaushikdeka/Zero-Trust-Compliance-Scanner-2.0
 Author: Zero-Trust Security Team
 Author-email: security@example.com
 Keywords: security,compliance,cis,aws,azure,gcp,kubernetes,terraform
@@ -120,7 +120,7 @@ A fully automated serverless solution that continuously scans enterprise infrast
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/zero-trust-compliance-scanner.git
+git clone https://github.com/leonkaushikdeka/Zero-Trust-Compliance-Scanner-2.0.git
 cd zero-trust-compliance-scanner
 
 # Install dependencies
